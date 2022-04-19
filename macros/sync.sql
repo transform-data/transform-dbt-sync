@@ -1,11 +1,6 @@
 {% macro get_sync_schema() %}
 
-    {# if the get_sync_schema macro exists in the base project use that #}
-    {% if context.get(project_name, {}).get('get_sync_schema') %}
-        {{ return(context[project_name].get_sync_schema()) }}
-    {% else %}
-        {{ return(target.schema~'_meta') }}
-    {% endif %}
+    {{ return('transform_dbt_sync')}}
 
 {% endmacro %}
 
