@@ -1,9 +1,39 @@
-{% macro bigquery__log_sync_event(schema, relation, user, target_name, is_full_refresh) %}
+{% macro get_sync_schema() %}
+
+    {{ return('transform_dbt_sync')}}
+
+{% endmacro %}
+
+{% macro get_sync_relation() %}
+
+    {%- set sync_schema=transform_dbt_sync.get_sync_schema() -%}
+
+    {%- set sync_table =
+        api.Relation.create(
+            database=target.database,
+            schema=sync_schema,
+            identifier='dbt_model_deployment_log',
+            type='table'
+        ) -%}
+
+    {{ return(sync_table) }}
+
+{% endmacro %}
+
+
+{% macro log_sync_event(schema, relation, user, target_name, is_full_refresh) -%}
+
+  {{ return(adapter.dispatch('log_sync_event', 'transform_dbt_sync')(schema, relation, user, target_name, is_full_refresh)) }}
+
+{% endmacro %}
+
+{% macro default__log_sync_event(schema, relation, user, target_name, is_full_refresh) %}
 
     insert into {{ transform_dbt_sync.get_sync_relation() }} (
         timestamp,
         schema,
         model,
+        user,
         target,
         is_full_refresh,
         git_sha,
@@ -19,9 +49,10 @@
 
     values (
         {{ dbt_utils.current_timestamp_in_utc() }},
-        {% if schema != None %}'{{ schema }}'{% else %}null{% endif %},
-        {% if relation != None %}'{{ relation }}'{% else %}null{% endif %},
-        {% if target_name != None %}'{{ target_name }}'{% else %}null{% endif %},
+        {% if schema != None %}'{{ schema }}'{% else %}null::varchar(512){% endif %},
+        {% if relation != None %}'{{ relation }}'{% else %}null::varchar(512){% endif %},
+        {% if user != None %}'{{ user }}'{% else %}null::varchar(512){% endif %},
+        {% if target_name != None %}'{{ target_name }}'{% else %}null::varchar(512){% endif %},
         {% if is_full_refresh %}TRUE{% else %}FALSE{% endif %},
         {% if git_sha != 'none' %}'{{ git_sha }}'{% else %}null::varchar(512){% endif %},
         {% if project_id != 'none' %}'{{ project_id }}'{% else %}null::varchar(512){% endif %},
@@ -29,17 +60,39 @@
         {% if run_id != 'none' %}'{{ run_id }}'{% else %}null::varchar(512){% endif %}
     );
 
+    commit;
+
 {% endmacro %}
 
 
-{% macro bigquery__create_sync_log_table() -%}
+{% macro create_sync_schema() %}
+    {%- set schema_name = transform_dbt_sync.get_sync_schema() -%}
+    {%- set schema_exists = adapter.check_schema_exists(database=target.database, schema=schema_name) -%}
+    {% if schema_exists == 0 %}
+        {% do create_schema(api.Relation.create(
+            database=target.database,
+            schema=schema_name)
+        ) %}
+    {% endif %}
+{% endmacro %}
+
+
+{% macro create_sync_log_table() -%}
+
+    {{ return(adapter.dispatch('create_sync_log_table', 'transform_dbt_sync')()) }}
+
+{% endmacro %}
+
+
+{% macro default__create_sync_log_table() -%}
 
     {% set required_columns = [
        ["timestamp", dbt_utils.type_timestamp()],
        ["schema", dbt_utils.type_string()],
        ["model", dbt_utils.type_string()],
+       ["user", dbt_utils.type_string()],
        ["target", dbt_utils.type_string()],
-       ["is_full_refresh", "BOOLEAN"],
+       ["is_full_refresh", "boolean"],
        ["git_sha", dbt_utils.type_string()],
        ["project_id", dbt_utils.type_string()],
        ["job_id", dbt_utils.type_string()],
@@ -72,6 +125,10 @@
             default null;
         {% endfor -%}
 
+        {%- if columns_to_create|length > 0 %}
+            commit;
+        {% endif -%}
+
     {%- else -%}
         create table if not exists {{ sync_table }}
         (
@@ -82,3 +139,10 @@
     {%- endif -%}
 
 {%- endmacro %}
+
+
+{% macro log_model_end_event() %}
+    {{ transform_dbt_sync.log_sync_event(
+        schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
+    ) }}
+{% endmacro %}

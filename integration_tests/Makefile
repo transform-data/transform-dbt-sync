@@ -1,24 +1,24 @@
 
 test-postgres:
-	dbt run-operation drop_audit_schema --target postgres
+	dbt run-operation drop_sync_schema --target postgres
 	dbt run --target postgres --full-refresh
 	dbt run --target postgres
 
 
 test-redshift:
-	dbt run-operation drop_audit_schema --target redshift
+	dbt run-operation drop_sync_schema --target redshift
 	dbt run --target redshift --full-refresh
 	dbt run --target redshift
 
 
 test-snowflake:
-	dbt run-operation drop_audit_schema --target snowflake
+	dbt run-operation drop_sync_schema --target snowflake
 	dbt run --target snowflake --full-refresh
 	dbt run --target snowflake
 
 
 test-bigquery:
-	dbt run-operation drop_audit_schema --target bigquery
+	dbt run-operation drop_sync_schema --target bigquery
 	dbt run --target bigquery --full-refresh
 	dbt run --target bigquery
 
