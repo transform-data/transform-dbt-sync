@@ -25,8 +25,8 @@ convenience models to make it easier to parse the event log data.
 
 models:
   ...
-  pre-hook: "{{ logging.log_model_start_event() }}"
-  post-hook: "{{ logging.log_model_end_event() }}"
+  pre-hook: "{{ transform_dbt_sync.log_model_start_event() }}"
+  post-hook: "{{ transform_dbt_sync.log_model_end_event() }}"
 ```
 
 That's it! You'll now have a stream of events for all dbt invocations in your

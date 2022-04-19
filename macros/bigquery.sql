@@ -1,6 +1,6 @@
 {% macro bigquery__log_audit_event(event_name, schema, relation, user, target_name, is_full_refresh) %}
 
-    insert into {{ logging.get_audit_relation() }} (
+    insert into {{ transform_dbt_sync.get_audit_relation() }} (
         event_name,
         event_timestamp,
         event_schema,
@@ -35,7 +35,7 @@
        ["invocation_id", dbt_utils.type_string()],
     ] -%}
 
-    {% set audit_table = logging.get_audit_relation() -%}
+    {% set audit_table = transform_dbt_sync.get_audit_relation() -%}
 
     {% set audit_table_exists = adapter.get_relation(audit_table.database, audit_table.schema, audit_table.name) -%}
 

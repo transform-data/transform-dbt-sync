@@ -1,5 +1,5 @@
-name: 'logging'
-version: '0.5.0'
+name: 'transform_dbt_sync'
+version: '0.1.0'
 config-version: 2
 
 require-dbt-version: [">=1.0.0", "<2.0.0"]
@@ -17,17 +17,17 @@ clean-targets:
 
 
 on-run-start:
-  - "{{ logging.create_audit_schema() }}"
-  - "{{ logging.create_audit_log_table() }}"
-  - "{{ logging.log_run_start_event() }}"
+  - "{{ transform_dbt_sync.create_audit_schema() }}"
+  - "{{ transform_dbt_sync.create_audit_log_table() }}"
+  - "{{ transform_dbt_sync.log_run_start_event() }}"
 
 
 on-run-end:
-  - "{{ logging.log_run_end_event() }}"
+  - "{{ transform_dbt_sync.log_run_end_event() }}"
 
 
 models:
-  logging:
+  transform_dbt_sync:
     +schema: meta
     bigquery:
       +enabled: '{{ target.type == "bigquery" | as_bool }}'
