@@ -25,7 +25,6 @@ convenience models to make it easier to parse the event log data.
 
 models:
   ...
-  pre-hook: "{{ transform_dbt_sync.log_model_start_event() }}"
   post-hook: "{{ transform_dbt_sync.log_model_end_event() }}"
 ```
 

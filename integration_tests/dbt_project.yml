@@ -7,5 +7,4 @@ profile: 'integration_tests'
 
 
 models:
-  pre-hook: "{{ transform_dbt_sync.log_model_start_event() }}"
   post-hook: "{{ transform_dbt_sync.log_model_end_event() }}"

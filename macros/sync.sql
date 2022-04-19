@@ -130,13 +130,6 @@
 {%- endmacro %}
 
 
-{% macro log_model_start_event() %}
-    {{ transform_dbt_sync.log_sync_event(
-        'model deployment started', schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
-    ) }}
-{% endmacro %}
-
-
 {% macro log_model_end_event() %}
     {{ transform_dbt_sync.log_sync_event(
         'model deployment completed', schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
