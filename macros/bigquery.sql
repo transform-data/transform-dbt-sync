@@ -1,15 +1,15 @@
 {% macro bigquery__log_sync_event(schema, relation, user, target_name, is_full_refresh) %}
 
     insert into {{ transform_dbt_sync.get_sync_relation() }} (
-        event_timestamp,
-        event_schema,
-        event_model,
-        event_target,
-        event_is_full_refresh,
-        event_git_sha,
-        event_project_id,
-        event_job_id,
-        event_run_id
+        timestamp,
+        schema,
+        model,
+        target,
+        is_full_refresh,
+        git_sha,
+        project_id,
+        job_id,
+        run_id
     )
 
     {%- set git_sha = env_var('DBT_CLOUD_GIT_SHA', 'none') -%}
@@ -35,15 +35,15 @@
 {% macro bigquery__create_sync_log_table() -%}
 
     {% set required_columns = [
-       ["event_timestamp", dbt_utils.type_timestamp()],
-       ["event_schema", dbt_utils.type_string()],
-       ["event_model", dbt_utils.type_string()],
-       ["event_target", dbt_utils.type_string()],
-       ["event_is_full_refresh", "BOOLEAN"],
-       ["event_git_sha", dbt_utils.type_string()],
-       ["event_project_id", dbt_utils.type_string()],
-       ["event_job_id", dbt_utils.type_string()],
-       ["event_run_id", dbt_utils.type_string()]
+       ["timestamp", dbt_utils.type_timestamp()],
+       ["schema", dbt_utils.type_string()],
+       ["model", dbt_utils.type_string()],
+       ["target", dbt_utils.type_string()],
+       ["is_full_refresh", "BOOLEAN"],
+       ["git_sha", dbt_utils.type_string()],
+       ["project_id", dbt_utils.type_string()],
+       ["job_id", dbt_utils.type_string()],
+       ["run_id", dbt_utils.type_string()]
     ] -%}
 
     {% set sync_table = transform_dbt_sync.get_sync_relation() -%}
