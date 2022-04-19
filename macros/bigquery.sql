@@ -1,23 +1,32 @@
-{% macro bigquery__log_sync_event(event_name, schema, relation, user, target_name, is_full_refresh) %}
+{% macro bigquery__log_sync_event(schema, relation, user, target_name, is_full_refresh) %}
 
     insert into {{ transform_dbt_sync.get_sync_relation() }} (
-        event_name,
         event_timestamp,
         event_schema,
         event_model,
         event_target,
         event_is_full_refresh,
-        invocation_id
+        event_git_sha,
+        event_project_id,
+        event_job_id,
+        event_run_id
     )
 
+    {%- set git_sha = env_var('DBT_CLOUD_GIT_SHA', 'none') -%}
+    {%- set project_id = env_var('DBT_CLOUD_PROJECT_ID', 'none') -%}
+    {%- set job_id = env_var('DBT_CLOUD_JOB_ID', 'none') -%}
+    {%- set run_id = env_var('DBT_CLOUD_RUN_ID', 'none') -%}
+
     values (
-        '{{ event_name }}',
         {{ dbt_utils.current_timestamp_in_utc() }},
         {% if schema != None %}'{{ schema }}'{% else %}null{% endif %},
         {% if relation != None %}'{{ relation }}'{% else %}null{% endif %},
         {% if target_name != None %}'{{ target_name }}'{% else %}null{% endif %},
         {% if is_full_refresh %}TRUE{% else %}FALSE{% endif %},
-        '{{ invocation_id }}'
+        {% if git_sha != 'none' %}'{{ git_sha }}'{% else %}null::varchar(512){% endif %},
+        {% if project_id != 'none' %}'{{ project_id }}'{% else %}null::varchar(512){% endif %},
+        {% if job_id != 'none' %}'{{ job_id }}'{% else %}null::varchar(512){% endif %},
+        {% if run_id != 'none' %}'{{ run_id }}'{% else %}null::varchar(512){% endif %}
     );
 
 {% endmacro %}
@@ -26,13 +35,15 @@
 {% macro bigquery__create_sync_log_table() -%}
 
     {% set required_columns = [
-       ["event_name", dbt_utils.type_string()],
        ["event_timestamp", dbt_utils.type_timestamp()],
        ["event_schema", dbt_utils.type_string()],
        ["event_model", dbt_utils.type_string()],
        ["event_target", dbt_utils.type_string()],
        ["event_is_full_refresh", "BOOLEAN"],
-       ["invocation_id", dbt_utils.type_string()],
+       ["event_git_sha", dbt_utils.type_string()],
+       ["event_project_id", dbt_utils.type_string()],
+       ["event_job_id", dbt_utils.type_string()],
+       ["event_run_id", dbt_utils.type_string()]
     ] -%}
 
     {% set sync_table = transform_dbt_sync.get_sync_relation() -%}
