@@ -1,21 +1,33 @@
-## dbt Event Logging
+# Transform-dbt Sync
+This package powers the Transform-dbt integration and is a detached fork of the
+[dbt-labs/dbt-event-logging](https://github.com/dbt-labs/dbt-event-logging)
+package. In this package we've hard coded the `schema.table` that the logs are
+written to, altered the columns logged to fit our needs, removed logs
+unnecessary for powering the Transform-dbt integration, and changed the package
+name as to not conflict with the `dbt-labs/dbt-event-logging` in case you are
+already using that.
 
-> :warning: **ADDING THIS PACKAGE TO YOUR DBT PROJECT CAN SIGNIFICANTLY SLOW
+> :note: **ADDING THIS PACKAGE TO YOUR DBT PROJECT CAN SLOW
 > DOWN YOUR DBT RUNS**. This is due to the number of insert statements executed by
-> this package, especially as a post-hook. Please consider if this package is
-> appropriate for your use case before using it.
+> this package as a post hook.
 
-Requires dbt >= 0.18.0
+Requires dbt >= 1.0.0
 
 This package provides out-of-the-box functionality to log events for all dbt
-invocations, including run start, run end, model start, and model end. It
-outputs all data and models to schema `[target.schema]_meta`. There are three
-convenience models to make it easier to parse the event log data.
+models successfully deployed. It outputs to the schema `transform_dbt_sync`.
 
 ### Setup
 
-1. Include this package in your `packages.yml` -- check [here](https://hub.getdbt.com/dbt-labs/logging/latest/)
-   for installation instructions.
+1. Include this package in your `packages.yml`
+
+```YAML
+# packages.yml
+packages:
+   ...
+  - git: "https://github.com/transform-data/transform-dbt-sync"
+    version: 0.1.0
+```
+
 2. Include the following in your `dbt_project.yml` directly within your
    `models:` block (making sure to handle indenting appropriately):
 
@@ -28,23 +40,8 @@ models:
   post-hook: "{{ transform_dbt_sync.log_model_end_event() }}"
 ```
 
-That's it! You'll now have a stream of events for all dbt invocations in your
-warehouse.
-
-#### Customising sync schema
-
-It's possible to customise the sync schema for any project by adding a macro named: `get_sync_schema` into your DBT project.
-
-For example to always log into a specific schema, say `analytics_meta`, regardless of DBT schema, you can include the following in your project:
-
-```sql
--- your_dbt_project/macros/get_sync_schema.sql
-{% macro get_sync_schema() %}
-
-   {{ return('analytics_meta') }}
-
-{% endmacro %}
-```
+That's it! You're data warehouse will now have a log of when models were last
+successfully built by dbt for Transform to integrate with.
 
 ### Adapter support
 
@@ -53,17 +50,6 @@ Postgres integrations.
 
 <sup>1</sup> BigQuery support may only work when 1 thread is set in your `profiles.yml` file. Anything larger may result in "quota exceeded" errors.  
 
-### Migration guide
-
-#### v0.1.17 -> v0.2.0
-
-New columns were added in v0.2.0:
-
--   **event_user as user** - `varchar(512)`the user who ran the model
--   **event_target as target** - `varchar(512)` the target used when running DBT
--   **event_is_full_refresh as is_full_refresh** - `boolean` whether the DBT run was a full refresh
-
-These will be added to your existing sync table automatically in the `on-run-start` DBT hook, and added to the staging tables deployed by this table when they are ran. The existing `event_schema` column will also be propagated into to `stg_dbt_model_deployments` as `schema`.
 
 ### Contributing
-Additional contributions to this repo are very welcome! Check out [this](https://discourse.getdbt.com/t/contributing-to-an-external-dbt-package/657) post on the best workflow for contributing to a package. All PRs should only include functionality that is contained within all Segment deployments; no implementation-specific details should be included.
+Additional contributions to this repo are very welcome! Additionally if you are making performance improvements, consider contributing upstream to [dbt-labs/dbt-event-logging](https://github.com/dbt-labs/dbt-event-logging)
