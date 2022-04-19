@@ -1,40 +1,40 @@
-{% macro get_audit_schema() %}
+{% macro get_sync_schema() %}
 
-    {# if the get_audit_schema macro exists in the base project use that #}
-    {% if context.get(project_name, {}).get('get_audit_schema') %}
-        {{ return(context[project_name].get_audit_schema()) }}
+    {# if the get_sync_schema macro exists in the base project use that #}
+    {% if context.get(project_name, {}).get('get_sync_schema') %}
+        {{ return(context[project_name].get_sync_schema()) }}
     {% else %}
         {{ return(target.schema~'_meta') }}
     {% endif %}
 
 {% endmacro %}
 
-{% macro get_audit_relation() %}
+{% macro get_sync_relation() %}
 
-    {%- set audit_schema=transform_dbt_sync.get_audit_schema() -%}
+    {%- set sync_schema=transform_dbt_sync.get_sync_schema() -%}
 
-    {%- set audit_table =
+    {%- set sync_table =
         api.Relation.create(
             database=target.database,
-            schema=audit_schema,
-            identifier='dbt_audit_log',
+            schema=sync_schema,
+            identifier='transform_sync_log',
             type='table'
         ) -%}
 
-    {{ return(audit_table) }}
+    {{ return(sync_table) }}
 
 {% endmacro %}
 
 
-{% macro log_audit_event(event_name, schema, relation, user, target_name, is_full_refresh) -%}
+{% macro log_sync_event(event_name, schema, relation, user, target_name, is_full_refresh) -%}
 
-  {{ return(adapter.dispatch('log_audit_event', 'transform_dbt_sync')(event_name, schema, relation, user, target_name, is_full_refresh)) }}
+  {{ return(adapter.dispatch('log_sync_event', 'transform_dbt_sync')(event_name, schema, relation, user, target_name, is_full_refresh)) }}
 
 {% endmacro %}
 
-{% macro default__log_audit_event(event_name, schema, relation, user, target_name, is_full_refresh) %}
+{% macro default__log_sync_event(event_name, schema, relation, user, target_name, is_full_refresh) %}
 
-    insert into {{ transform_dbt_sync.get_audit_relation() }} (
+    insert into {{ transform_dbt_sync.get_sync_relation() }} (
         event_name,
         event_timestamp,
         event_schema,
@@ -61,8 +61,8 @@
 {% endmacro %}
 
 
-{% macro create_audit_schema() %}
-    {%- set schema_name = transform_dbt_sync.get_audit_schema() -%}
+{% macro create_sync_schema() %}
+    {%- set schema_name = transform_dbt_sync.get_sync_schema() -%}
     {%- set schema_exists = adapter.check_schema_exists(database=target.database, schema=schema_name) -%}
     {% if schema_exists == 0 %}
         {% do create_schema(api.Relation.create(
@@ -73,14 +73,14 @@
 {% endmacro %}
 
 
-{% macro create_audit_log_table() -%}
+{% macro create_sync_log_table() -%}
 
-    {{ return(adapter.dispatch('create_audit_log_table', 'transform_dbt_sync')()) }}
+    {{ return(adapter.dispatch('create_sync_log_table', 'transform_dbt_sync')()) }}
 
 {% endmacro %}
 
 
-{% macro default__create_audit_log_table() -%}
+{% macro default__create_sync_log_table() -%}
 
     {% set required_columns = [
        ["event_name", dbt_utils.type_string()],
@@ -93,17 +93,17 @@
        ["invocation_id", dbt_utils.type_string()],
     ] -%}
 
-    {% set audit_table = transform_dbt_sync.get_audit_relation() -%}
+    {% set sync_table = transform_dbt_sync.get_sync_relation() -%}
 
-    {% set audit_table_exists = adapter.get_relation(audit_table.database, audit_table.schema, audit_table.name) -%}
+    {% set sync_table_exists = adapter.get_relation(sync_table.database, sync_table.schema, sync_table.name) -%}
 
 
-    {% if audit_table_exists -%}
+    {% if sync_table_exists -%}
 
         {%- set columns_to_create = [] -%}
 
         {# map to lower to cater for snowflake returning column names as upper case #}
-        {%- set existing_columns = adapter.get_columns_in_relation(audit_table)|map(attribute='column')|map('lower')|list -%}
+        {%- set existing_columns = adapter.get_columns_in_relation(sync_table)|map(attribute='column')|map('lower')|list -%}
 
         {%- for required_column in required_columns -%}
             {%- if required_column[0] not in existing_columns -%}
@@ -114,7 +114,7 @@
 
 
         {%- for column in columns_to_create -%}
-            alter table {{ audit_table }}
+            alter table {{ sync_table }}
             add column {{ column[0] }} {{ column[1] }}
             default null;
         {% endfor -%}
@@ -124,7 +124,7 @@
         {% endif -%}
 
     {%- else -%}
-        create table if not exists {{ audit_table }}
+        create table if not exists {{ sync_table }}
         (
         {% for column in required_columns %}
             {{ column[0] }} {{ column[1] }}{% if not loop.last %},{% endif %}
@@ -136,31 +136,31 @@
 
 
 {% macro log_run_start_event() %}
-    {{ transform_dbt_sync.log_audit_event('run started', user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH) }}
+    {{ transform_dbt_sync.log_sync_event('run started', user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH) }}
 {% endmacro %}
 
 
 {% macro log_run_end_event() %}
-    {{ transform_dbt_sync.log_audit_event('run completed', user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH) }}
+    {{ transform_dbt_sync.log_sync_event('run completed', user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH) }}
 {% endmacro %}
 
 
 {% macro log_model_start_event() %}
-    {{ transform_dbt_sync.log_audit_event(
+    {{ transform_dbt_sync.log_sync_event(
         'model deployment started', schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
     ) }}
 {% endmacro %}
 
 
 {% macro log_model_end_event() %}
-    {{ transform_dbt_sync.log_audit_event(
+    {{ transform_dbt_sync.log_sync_event(
         'model deployment completed', schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
     ) }}
 {% endmacro %}
 
 
 {% macro log_custom_event(event_name) %}
-    {{ transform_dbt_sync.log_audit_event(
+    {{ transform_dbt_sync.log_sync_event(
         event_name, schema=this.schema, relation=this.name, user=target.user, target_name=target.name, is_full_refresh=flags.FULL_REFRESH
     ) }}
 {% endmacro %}

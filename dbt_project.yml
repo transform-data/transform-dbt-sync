@@ -17,8 +17,8 @@ clean-targets:
 
 
 on-run-start:
-  - "{{ transform_dbt_sync.create_audit_schema() }}"
-  - "{{ transform_dbt_sync.create_audit_log_table() }}"
+  - "{{ transform_dbt_sync.create_sync_schema() }}"
+  - "{{ transform_dbt_sync.create_sync_log_table() }}"
   - "{{ transform_dbt_sync.log_run_start_event() }}"
 
 
