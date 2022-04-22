@@ -9,7 +9,8 @@
         git_sha,
         project_id,
         job_id,
-        run_id
+        run_id,
+        project_name
     )
 
     {%- set git_sha = env_var('DBT_CLOUD_GIT_SHA', 'none') -%}
@@ -26,7 +27,8 @@
         {% if git_sha != 'none' %}'{{ git_sha }}'{% else %}null::varchar(512){% endif %},
         {% if project_id != 'none' %}'{{ project_id }}'{% else %}null::varchar(512){% endif %},
         {% if job_id != 'none' %}'{{ job_id }}'{% else %}null::varchar(512){% endif %},
-        {% if run_id != 'none' %}'{{ run_id }}'{% else %}null::varchar(512){% endif %}
+        {% if run_id != 'none' %}'{{ run_id }}'{% else %}null::varchar(512){% endif %},
+        {% if project_name != None %}'{{ project_name }}'{% else %}null::varchar(512){% endif %}
     );
 
 {% endmacro %}
@@ -43,7 +45,8 @@
        ["git_sha", dbt_utils.type_string()],
        ["project_id", dbt_utils.type_string()],
        ["job_id", dbt_utils.type_string()],
-       ["run_id", dbt_utils.type_string()]
+       ["run_id", dbt_utils.type_string()],
+       ["project_name", dbt_utils.type_string()]
     ] -%}
 
     {% set sync_table = transform_dbt_sync.get_sync_relation() -%}
